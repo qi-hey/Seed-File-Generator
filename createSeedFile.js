@@ -5,13 +5,31 @@ const fs = require('fs');
 const beautify = require('js-beautify');
 const path = require('path');
 const homeDir = require('os').homedir();
-const desktopDir = `${homeDir}/Desktop`;
+const desktopDIR = `${homeDir}/Desktop`;
+const serverDIR = `${__dirname}/static`;
 // Set the path the seed file will be saved to
-let outputPath = `${desktopDir}/seed.json`;
-outputPath = path.normalize(outputPath);
+let outputPath = null;
 
 let data = null;
 let exportData = {};
+
+let environment = null;
+
+if (process.argv[2] !== undefined) { // We are running in a server env
+    environment = 'server';
+    console.log("Running in SERVER mode");
+    if (!fs.existsSync(serverDIR)) {
+        console.log('Creating Directory for Static Content');
+        fs.mkdirSync(serverDIR);
+    }
+    outputPath = `${serverDIR}/seed.json`;
+    outputPath = path.normalize(outputPath);
+} else { // We are running on desktop
+    console.log("Running in DESKTOP mode");
+    environment = 'desktop';
+    outputPath = `${desktopDIR}/seed.json`;
+    outputPath = path.normalize(outputPath);
+}
 
 console.log('Getting API Data');
 
@@ -38,9 +56,17 @@ xhr.addEventListener("readystatechange", function () {
         console.log('Formatting API Data');
         exportData = JSON.stringify(exportData);
         exportData = beautify(exportData, { indent_size: 2, space_in_empty_paren: true });
-        // Write the file to the desktop as "seed.json"
-        console.log(`Saving API Data to "${outputPath}"`);
-        fs.writeFileSync(outputPath, exportData);
+        if (environment === 'server') {
+            // Write the file to the CWD's "static" directory as "seed.json"
+            console.log(`Saving API Data to "${outputPath}"`);
+            fs.writeFileSync(outputPath, exportData);
+        } else if (environment === 'desktop') {
+            // Write the file to the desktop as "seed.json"
+            console.log(`Saving API Data to "${outputPath}"`);
+            fs.writeFileSync(outputPath, exportData);
+        } else {
+            console.log('NO ENVIRONMENT SET');
+        }
         console.log('DONE');
     }
 });
